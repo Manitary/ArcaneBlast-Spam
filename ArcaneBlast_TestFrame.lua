@@ -10,6 +10,7 @@ frame:SetPoint('CENTER', UIParent, 'CENTER')
 --needs to be reworked into a per character saved variable
 frame:SetMovable(true)
 frame:SetUserPlaced(true)
+frame:EnableMouse(false)
 frame:SetScript('OnDragStart', frame.StartMoving)
 frame:SetScript('OnDragStop', frame.StopMovingOrSizing)
 
@@ -38,6 +39,7 @@ frame.bg:SetTexture('Interface\\DialogFrame\\UI-DialogBox-Background')
 
 --display the frame
 --frame:Show()
+frame:Hide()
 
 frame:RegisterEvent('PLAYER_LOGIN')
 --frame:RegisterEvent('PLAYER_LOGOUT')
@@ -226,7 +228,10 @@ function AB:CheckCharacter()
 		buffList.ArcaneFocus.cost = -select(5, GetTalentInfo(1, 2))
 		buffList.NetherwindPresence.haste = 2 * select(5, GetTalentInfo(1, 28))
 		buffList.Precision.cost = -select(5, GetTalentInfo(3, 6))
-		--remake this using the talent type
+		if not IsSpellKnown(26297) then
+			buffList.Berserking = nil
+		end
+		--remake this using the talent type maybe?
 	end
 end
 
@@ -334,7 +339,7 @@ local UpdatePrediction = function(self, elapsed)
 		count = 0
 		--loop
 		while true do
-			
+
 			--if any self-buff is available, activate it and start cooldown (except mana gem/evocation)
 			for k, buff in pairs(buffList) do
 				if type == 'temporary' and buff.remainingCooldown == 0 then
@@ -380,7 +385,7 @@ local UpdatePrediction = function(self, elapsed)
 		end
 
 		--change colour depending on a TimeToDie feed, if available
-		if timeToDie then time > timeToDie then
+		if timeToDie and time > timeToDie then
 			frame.text:SetTextColor(0, 1, 0, 1)
 		else
 			frame.text:SetTextColor(1, 0, 0, 1)
