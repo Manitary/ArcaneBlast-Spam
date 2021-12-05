@@ -2,6 +2,6 @@
 ## Title: ArcaneBlast Spam
 ## Description: Timer that tracks for how much time you can spam Arcane Blast without running out of mana
 ## Author: Manitary
-## Versions: 0.1
+## Versions: 0.2
 
 ArcaneBlast_TestFrame.lua
