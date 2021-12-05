@@ -243,7 +243,7 @@ end
 ]]--
 
 local timeSinceLastUpdate = 0
-local update_interval = 0.2
+local update_interval = 0.05
 
 local UpdatePrediction = function(self, elapsed)
 	timeSinceLastUpdate = timeSinceLastUpdate + elapsed
@@ -288,13 +288,28 @@ local UpdatePrediction = function(self, elapsed)
 		end
 		frame.buffs:SetText(currentbuffs)
 
-		time = 0
-		count = 0
+		local spellCastName, _, _, _, _, endTime = UnitCastingInfo('player')
+
+		time = spellCastName and endTime / 1000 - GetTime() or 0
+
+		if time > 0 then
+			for k, buff in pairs(buffList) do
+				if buff.type == 'temporary' then
+					UpdateBuff(buff, time)
+				end
+			end
+			local tempCost = select(4, GetSpellInfo(spellCastName))
+			manaCurrent = math.min(manaCurrent + manaRegen * time, manaMax) - tempCost
+			if spellCastName == 'Arcane Blast' then
+				stacks = math.min(stacks + 1, 4)
+			end
+		end
 
 		manaCost = ComputeManaCost(baseManaCost, stacks, buffList)
 		castTime = ComputeCastTime(baseCastTime, buffList)
 		frame.stats:SetText('Cast time: ' .. math.floor(castTime * 100) / 100 .. '\n' .. 'Mana Cost: ' .. math.floor(manaCost * 100) / 100)	
 
+		count = 0
 		--loop
 		while true do
 			--if any self-buff is available, activate it and start cooldown (except mana gem/evocation)
@@ -329,7 +344,7 @@ local UpdatePrediction = function(self, elapsed)
 				end
 			end
 		end
-		frame.text:SetText('Time left: ' .. math.floor(time * 100) / 100 .. '\n' .. 'Casts left: ' .. count)
+		frame.text:SetText('Time left: ' .. string.format("%.1f", math.floor(time * 10) / 10) .. '\n' .. 'Casts left: ' .. count)
 
 		timeSinceLastUpdate = timeSinceLastUpdate - update_interval
 	end
