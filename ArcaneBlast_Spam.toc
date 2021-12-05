@@ -4,4 +4,4 @@
 ## Author: Manitary
 ## Versions: 0.2
 
-ArcaneBlast_TestFrame.lua
+ArcaneBlast_Spam.lua
