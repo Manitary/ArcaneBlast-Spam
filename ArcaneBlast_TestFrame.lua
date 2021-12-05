@@ -5,11 +5,11 @@ frame:SetWidth(100)
 frame:SetHeight(100)
 frame:SetPoint('CENTER', UIParent, 'CENTER')
 
---frame movable
---maybe add a slash command to make it (un)movable
-frame:EnableMouse(true)
+--frame position saved between sessions
+--this breaks if the game is loaded without the addon, then again with it
+--needs to be reworked into a per character saved variable
 frame:SetMovable(true)
-frame:RegisterForDrag('LeftButton')
+frame:SetUserPlaced(true)
 frame:SetScript('OnDragStart', frame.StartMoving)
 frame:SetScript('OnDragStop', frame.StopMovingOrSizing)
 
@@ -34,14 +34,14 @@ frame.bg:SetPoint('CENTER',0,0)
 frame.bg:SetWidth(100)
 frame.bg:SetHeight(100)
 frame.bg:SetTexture('Interface\\DialogFrame\\UI-DialogBox-Background')
---BagBuddy.portrait:SetTexture(0.0, 0.0, 1.0, 0.5)
+--frame.bg:SetTexture(0.0, 0.0, 1.0, 0.5)
 
 --display the frame
---maybe add a slash command to make it (not) visible
-frame:Show()
+--frame:Show()
 
----
 frame:RegisterEvent('PLAYER_LOGIN')
+--frame:RegisterEvent('PLAYER_LOGOUT')
+--frame:RegisterEvent('ADDON_LOADED')
 
 --get AB ready to check the player on talent change
 function AB:StartUp()
@@ -230,7 +230,6 @@ function AB:CheckCharacter()
 	end
 end
 
---[[
 --slash command to manually turn AB on/off
 SLASH_AB1 = "/ab"
 SlashCmdList["AB"] = function(msg)
@@ -241,13 +240,29 @@ SlashCmdList["AB"] = function(msg)
 	elseif msg == 'off' then
 		print('AB off')
 		frame:UnregisterAllEvents()
-	else
-		print('Use: /ab on/off')
+		frame:Hide()
+	elseif msg == 'lock' then
+		--frame movable
+		--maybe add a slash command to make it (un)movable
+		if not UnitAffectingCombat('player') then
+			if frame:IsMouseEnabled() then
+				frame:Hide()
+				frame:EnableMouse(false)
+				frame:RegisterForDrag()
+			else
+				frame:Show()
+				frame:EnableMouse(true)
+				frame:RegisterForDrag('LeftButton')
+			end
+		else
+			print('AB cannot be moved while in combat')
+		end
+	else	
+		print('Use: /ab on/off/lock')
 	end
 end
-]]--
 
-local timeToDie = 0
+local timeToDie
 
 local timeSinceLastUpdate = 0
 local update_interval = 0.05
@@ -319,6 +334,7 @@ local UpdatePrediction = function(self, elapsed)
 		count = 0
 		--loop
 		while true do
+			
 			--if any self-buff is available, activate it and start cooldown (except mana gem/evocation)
 			for k, buff in pairs(buffList) do
 				if type == 'temporary' and buff.remainingCooldown == 0 then
@@ -326,20 +342,24 @@ local UpdatePrediction = function(self, elapsed)
 					buff.remainingDuration = buff.maxDuration
 				end
 			end
+
 			--compute mana cost
 			manaCost = ComputeManaCost(baseManaCost, stacks, buffList)
 			--compute cast time
 			castTime = ComputeCastTime(baseCastTime, buffList)
 			--compute mana regen during cast time
 			manaGain = manaRegen * castTime
+
 			--if manaCurrent + manaGain + [manaGem] < manaMax then
 				--use managem
 				--manaCurrent = manaCurrent + manaGem
 			--end
+
 			--break when you you can't cast anymore
 			if manaCost > manaCurrent then
 				break
 			end
+
 			--update after casting
 			time = time + castTime
 			count = count + 1
@@ -351,16 +371,21 @@ local UpdatePrediction = function(self, elapsed)
 				end
 			end
 		end
+
+		--display format (s or m:ss)
 		if time < 60 then
 			frame.text:SetText('Time left: ' .. string.format("%.1f", time) .. '\n' .. 'Casts left: ' .. count)
 		else
-			frame.text:SetText('Time left: ' .. string.format("%d:%.1f", time / 60, time % 60) .. '\n' .. 'Casts left: ' .. count)
+			frame.text:SetText('Time left: ' .. string.format("%d:%0.1f", time / 60, time % 60) .. '\n' .. 'Casts left: ' .. count)
 		end
-		if time > timeToDie then
+
+		--change colour depending on a TimeToDie feed, if available
+		if timeToDie then time > timeToDie then
 			frame.text:SetTextColor(0, 1, 0, 1)
 		else
 			frame.text:SetTextColor(1, 0, 0, 1)
 		end
+
 		timeSinceLastUpdate = timeSinceLastUpdate - update_interval
 	end
 end
@@ -381,14 +406,16 @@ function AB:PLAYER_REGEN_DISABLED()
 	end
 	frame:RegisterEvent('CHAT_MSG_ADDON')
 	frame:SetScript('OnUpdate', UpdatePrediction)
+	frame:Show()
 end
 
 function AB:PLAYER_REGEN_ENABLED()
 	print('Leaving combat')
 	frame:UnregisterEvent('CHAT_MSG_ADDON')
 	frame:SetScript('OnUpdate', nil);
+	frame:Hide()
 	timeSinceLastUpdate = 0
-	timeToDie = 0
+	timeToDie = nil
 end
 
 function AB:CHAT_MSG_ADDON(...)
