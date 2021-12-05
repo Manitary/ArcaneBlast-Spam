@@ -146,7 +146,7 @@ local buffList = {
 	EngiGloves = {
 		name = 'Hyperspeed Accelerators',
 		active = false,
-		type = 'temporary',
+		type = 'equip',
 		rating = 340,
 		maxDuration = 12,
 		maxCooldown = 60,
@@ -168,14 +168,15 @@ local buffList = {
 		hasterating = 0,
 	},
 	]]--
-	--[[
 	ManaGem = {
 		name = 'Mana Sapphire',
 		active = true,
 		type = 'item',
-		???
+		manaFlat = 3330,
+		manaFlatMax = 3500,
+		maxCooldown = 120,
+		charges = 3,
 	},
-	--]]
 	--[[
 	Evocation = {
 		???
@@ -249,7 +250,7 @@ function AB:CheckCharacter()
 				rating = 340,
 				maxDuration = 12,
 				maxCooldown = 60,
-			},
+			}
 		end
 	end
 end
@@ -305,15 +306,16 @@ local UpdatePrediction = function(self, elapsed)
 		manaMax = UnitManaMax('player')
 		manaRegen = select(2, GetManaRegen())
 		stacks = select(4, UnitDebuff('player', 'Arcane Blast')) or 0
+		buffList.manaGem.charges = GetItemCount(33312, nil, true)
 
 		--check external buffs and set duration if found
+		--also check charges/cd of mana gem
 		for k, buff in pairs(buffList) do
 			if buff.type == 'temporary' then
 				local name, _, _, _, _, _, expirationTime = UnitBuff('player', buff.name)
 				if name then
 					buff.active = true
 					buff.remainingDuration = expirationTime - GetTime()
-					--print(name)
 				else
 					buff.active = false
 					buff.remainingDuration = nil
@@ -321,11 +323,16 @@ local UpdatePrediction = function(self, elapsed)
 				if buff.maxCooldown then
 					local activationTime, spellCooldown = GetSpellCooldown(buff.name)
 					buff.remainingCooldown = activationTime == 0 and 0 or (activationTime + spellCooldown - GetTime())
-					--print(buff.remainingCooldown)
 				end
+			elseif k == 'ManaGem' then
+				buff.charges = GetItemCount(33312, nil, true)
+				local activationTime, itemCooldown = GetItemCooldown(33312)
+				buff.remainingCooldown = activationTime == 0 and 0 or (activationTime + itemCooldown - GetTime())
 			end
 		end
 
+		--temporary
+		--buff list for troubleshooting
 		local currentbuffs = ''
 		for k, buff in pairs(buffList) do
 			if buff.active == true then
@@ -335,12 +342,11 @@ local UpdatePrediction = function(self, elapsed)
 		frame.buffs:SetText(currentbuffs)
 
 		local spellCastName, _, _, _, _, endTime = UnitCastingInfo('player')
-
 		time = spellCastName and endTime / 1000 - GetTime() or 0
 
 		if time > 0 then
 			for k, buff in pairs(buffList) do
-				if buff.type == 'temporary' then
+				if buff.type == 'temporary' or buff.type == 'item' then
 					UpdateBuff(buff, time)
 				end
 			end
@@ -375,10 +381,13 @@ local UpdatePrediction = function(self, elapsed)
 			--compute mana regen during cast time
 			manaGain = manaRegen * castTime
 
-			--if manaCurrent + manaGain + [manaGem] < manaMax then
-				--use managem
-				--manaCurrent = manaCurrent + manaGem
-			--end
+			--use mana gem if availale and isn't wasted even with max proc
+			if buffList.manaGem.charges > 0 and buffList.manaGem.remainingCooldown == 0 then
+				if manaCurrent + manaGain + buffList.manaGem.manaFlatMax < manaMax then
+					buffList.manaGem.charges = buffList.manaGem.charges - 1
+					manaCurrent = manaCurrent + buffList.manaGem.manaFlat
+				end
+			end
 
 			--break when you you can't cast anymore
 			if manaCost > manaCurrent then
