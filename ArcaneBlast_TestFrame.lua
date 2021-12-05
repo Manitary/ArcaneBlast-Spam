@@ -341,8 +341,10 @@ local UpdatePrediction = function(self, elapsed)
 		end
 		frame.buffs:SetText(currentbuffs)
 
-		local spellCastName, _, _, _, _, endTime = UnitCastingInfo('player')
-		time = spellCastName and endTime / 1000 - GetTime() or 0
+		local spellCastName, _, _, _, _, endCastTime = UnitCastingInfo('player')
+		local spellChannelName, _, _, _, _, endChannelTime = UnitChannelInfo('player')
+		time = spellCastName and endCastTime / 1000 - GetTime() or 0
+		time = spellChannelName and endChannelTime / 1000 - GetTime() or time
 
 		if time > 0 then
 			for k, buff in pairs(buffList) do
@@ -350,10 +352,12 @@ local UpdatePrediction = function(self, elapsed)
 					UpdateBuff(buff, time)
 				end
 			end
-			local tempCost = select(4, GetSpellInfo(spellCastName))
-			manaCurrent = math.min(manaCurrent + manaRegen * time, manaMax) - tempCost
-			if spellCastName == 'Arcane Blast' then
-				stacks = math.min(stacks + 1, 4)
+			if spellCastName then
+				local tempCost = select(4, GetSpellInfo(spellCastName))
+				manaCurrent = math.min(manaCurrent + manaRegen * time, manaMax) - tempCost
+				if spellCastName == 'Arcane Blast' then
+					stacks = math.min(stacks + 1, 4)
+				end
 			end
 		end
 
@@ -410,7 +414,7 @@ local UpdatePrediction = function(self, elapsed)
 		if time < 60 then
 			frame.text:SetText('Time left: ' .. string.format("%.1f", time) .. '\n' .. 'Casts left: ' .. count)
 		else
-			frame.text:SetText('Time left: ' .. string.format("%d:%0.1f", time / 60, time % 60) .. '\n' .. 'Casts left: ' .. count)
+			frame.text:SetText('Time left: ' .. string.format("%d:%04.1f", time / 60, time % 60) .. '\n' .. 'Casts left: ' .. count)
 		end
 
 		--change colour depending on a TimeToDie feed, if available
@@ -462,7 +466,6 @@ end
 --general event handler
 frame:SetScript('OnEvent', function(self, event, ...)
 	if AB[event] then 
-		print(event)
 		AB[event](AB, ...)
 	end
 	if event == 'CHARACTER_POINTS_CHANGED' or event == 'ACTIVE_TALENT_GROUP_CHANGED' or event == 'PLAYER_ALIVE' or event == 'PLAYER_LOGIN' or event == 'PLAYER_EQUIPMENT_CHANGED' then
