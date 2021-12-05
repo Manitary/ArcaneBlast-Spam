@@ -141,6 +141,11 @@ local buffList = {
 		maxCooldown = 180,
 	},
 	--[[
+	EngiGloves = {
+		???
+	},
+	--]]
+	--[[
 	PotionSpeed = {
 		name = 'Potion of Speed',
 		active = false,
@@ -162,7 +167,7 @@ local buffList = {
 		active = true,
 		type = 'item',
 		???
-	}
+	},
 	--]]
 	--[[
 	Evocation = {
@@ -241,6 +246,8 @@ SlashCmdList["AB"] = function(msg)
 	end
 end
 ]]--
+
+local timeToDie = 0
 
 local timeSinceLastUpdate = 0
 local update_interval = 0.05
@@ -344,8 +351,16 @@ local UpdatePrediction = function(self, elapsed)
 				end
 			end
 		end
-		frame.text:SetText('Time left: ' .. string.format("%.1f", math.floor(time * 10) / 10) .. '\n' .. 'Casts left: ' .. count)
-
+		if time < 60 then
+			frame.text:SetText('Time left: ' .. string.format("%.1f", time) .. '\n' .. 'Casts left: ' .. count)
+		else
+			frame.text:SetText('Time left: ' .. string.format("%d:%.1f", time / 60, time % 60) .. '\n' .. 'Casts left: ' .. count)
+		end
+		if time > timeToDie then
+			frame.text:SetTextColor(0, 1, 0, 1)
+		else
+			frame.text:SetTextColor(1, 0, 0, 1)
+		end
 		timeSinceLastUpdate = timeSinceLastUpdate - update_interval
 	end
 end
@@ -364,13 +379,25 @@ function AB:PLAYER_REGEN_DISABLED()
 			end
 		end
 	end
+	frame:RegisterEvent('CHAT_MSG_ADDON')
 	frame:SetScript('OnUpdate', UpdatePrediction)
 end
 
 function AB:PLAYER_REGEN_ENABLED()
 	print('Leaving combat')
+	frame:UnregisterEvent('CHAT_MSG_ADDON')
 	frame:SetScript('OnUpdate', nil);
 	timeSinceLastUpdate = 0
+	timeToDie = 0
+end
+
+function AB:CHAT_MSG_ADDON(...)
+	local prefix, message, channel, source = ...
+	print(prefix)
+	if prefix == 'Manitary - ABS' and source == UnitName('player') then
+		timeToDie = tonumber(message)
+		print(timeToDie)
+	end
 end
 
 --general event handler
