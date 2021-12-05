@@ -49,6 +49,7 @@ frame:RegisterEvent('PLAYER_LOGIN')
 function AB:StartUp()
 	frame:RegisterEvent('CHARACTER_POINTS_CHANGED')
 	frame:RegisterEvent('ACTIVE_TALENT_GROUP_CHANGED')
+	frame:RegisterEvent('PLAYER_EQUIPMENT_CHANGED')
 --NOTE: On a fresh login, after PLAYER_LOGIN the game still does not know talents, PLAYER_ALIVE is needed for that
 	frame:RegisterEvent('PLAYER_ALIVE')
 end
@@ -142,9 +143,13 @@ local buffList = {
 		maxDuration = 10,
 		maxCooldown = 180,
 	},
-	--[[
 	EngiGloves = {
-		???
+		name = 'Hyperspeed Accelerators',
+		active = false,
+		type = 'temporary',
+		rating = 340,
+		maxDuration = 12,
+		maxCooldown = 60,
 	},
 	--]]
 	--[[
@@ -225,13 +230,27 @@ function AB:CheckCharacter()
 		print('Arcane Mage detected')
 		frame:RegisterEvent('PLAYER_REGEN_ENABLED')
 		frame:RegisterEvent('PLAYER_REGEN_DISABLED')
+		--remake this using the talent type maybe?
 		buffList.ArcaneFocus.cost = -select(5, GetTalentInfo(1, 2))
 		buffList.NetherwindPresence.haste = 2 * select(5, GetTalentInfo(1, 28))
 		buffList.Precision.cost = -select(5, GetTalentInfo(3, 6))
 		if not IsSpellKnown(26297) then
 			buffList.Berserking = nil
 		end
-		--remake this using the talent type maybe?
+		local gloves = GetInventoryItemLink("player", 10)
+		--unlike racial, gloves enchant can be added/removed on the fly
+		if (not gloves) or select(3, strsplit(":", gloves)) ~= '3604' then
+			buffList.EngiGloves = nil
+		else
+			buffList.EngiGloves = {
+				name = 'Hyperspeed Accelerators',
+				active = false,
+				type = 'temporary',
+				rating = 340,
+				maxDuration = 12,
+				maxCooldown = 60,
+			},
+		end
 	end
 end
 
@@ -341,6 +360,7 @@ local UpdatePrediction = function(self, elapsed)
 		while true do
 
 			--if any self-buff is available, activate it and start cooldown (except mana gem/evocation)
+			--need to implement a logic not to overlap haste cooldowns (berserking, icy veins, engi gloves)
 			for k, buff in pairs(buffList) do
 				if type == 'temporary' and buff.remainingCooldown == 0 then
 					buff.active = true
@@ -438,7 +458,7 @@ frame:SetScript('OnEvent', function(self, event, ...)
 		print(event)
 		AB[event](AB, ...)
 	end
-	if event == 'CHARACTER_POINTS_CHANGED' or event == 'ACTIVE_TALENT_GROUP_CHANGED' or event == 'PLAYER_ALIVE' or event == 'PLAYER_LOGIN' then
+	if event == 'CHARACTER_POINTS_CHANGED' or event == 'ACTIVE_TALENT_GROUP_CHANGED' or event == 'PLAYER_ALIVE' or event == 'PLAYER_LOGIN' or event == 'PLAYER_EQUIPMENT_CHANGED' then
 		AB:CheckCharacter()
 	end
 end)
