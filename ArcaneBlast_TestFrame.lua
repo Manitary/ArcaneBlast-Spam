@@ -170,7 +170,7 @@ local buffList = {
 	]]--
 	ManaGem = {
 		name = 'Mana Sapphire',
-		active = true,
+		active = false,
 		type = 'item',
 		manaFlat = 3330,
 		manaFlatMax = 3500,
@@ -246,7 +246,7 @@ function AB:CheckCharacter()
 			buffList.EngiGloves = {
 				name = 'Hyperspeed Accelerators',
 				active = false,
-				type = 'temporary',
+				type = 'equip',
 				rating = 340,
 				maxDuration = 12,
 				maxCooldown = 60,
@@ -306,7 +306,7 @@ local UpdatePrediction = function(self, elapsed)
 		manaMax = UnitManaMax('player')
 		manaRegen = select(2, GetManaRegen())
 		stacks = select(4, UnitDebuff('player', 'Arcane Blast')) or 0
-		buffList.manaGem.charges = GetItemCount(33312, nil, true)
+		buffList.ManaGem.charges = GetItemCount(33312, nil, true)
 
 		--check external buffs and set duration if found
 		--also check charges/cd of mana gem
@@ -382,10 +382,10 @@ local UpdatePrediction = function(self, elapsed)
 			manaGain = manaRegen * castTime
 
 			--use mana gem if availale and isn't wasted even with max proc
-			if buffList.manaGem.charges > 0 and buffList.manaGem.remainingCooldown == 0 then
-				if manaCurrent + manaGain + buffList.manaGem.manaFlatMax < manaMax then
-					buffList.manaGem.charges = buffList.manaGem.charges - 1
-					manaCurrent = manaCurrent + buffList.manaGem.manaFlat
+			if buffList.ManaGem.charges > 0 and buffList.ManaGem.remainingCooldown == 0 then
+				if manaCurrent + manaGain + buffList.ManaGem.manaFlatMax < manaMax then
+					buffList.ManaGem.charges = buffList.ManaGem.charges - 1
+					manaCurrent = manaCurrent + buffList.ManaGem.manaFlat
 				end
 			end
 
@@ -454,10 +454,8 @@ end
 
 function AB:CHAT_MSG_ADDON(...)
 	local prefix, message, channel, source = ...
-	print(prefix)
 	if prefix == 'Manitary - ABS' and source == UnitName('player') then
 		timeToDie = tonumber(message)
-		print(timeToDie)
 	end
 end
 
